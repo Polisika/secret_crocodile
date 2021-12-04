@@ -5,17 +5,40 @@ using System.Threading.Tasks;
 
 namespace server
 {
+    class AcceptedLaws
+    { 
+        public List<Card> Accepted { get; private set; }
+        private int _liberal = 0;
+        public int _croco { get; private set; } = 0;
+        public void Add(Card card)
+        {
+            Accepted.Add(card);
+            if (card.isLiberal)
+                _liberal++;
+            else
+                _croco++;
+
+            if (_liberal == 5)
+                throw new AccessViolationException("Либералы выиграли");
+            else if (_croco == 6)
+                throw new ApplicationException("Крокодилы выиграли");
+        }
+    }
+
     public class Session
     {
-        public List<Card> AcceptedLaws { get; private set; }
+        private AcceptedLaws _accepted;
         private Card CurrentCard { get; set; }
 
-        public List<Player> players;
+        public List<Player?> players;
         public int Round { get; set; } = 1;
         private Random _rand;
         public Events Event { get; set; }
         private int _prev_pres;
         private int _true_prev_pres;
+        private int _killed = 0;
+        private bool _haveVeto = false;
+        private bool _wasShowParty = false;
         private Player president;
         public Player President { get => president; 
             private set
@@ -23,9 +46,8 @@ namespace server
                 if (President == _cancellor)
                     throw new Exception("Президент не может быть одновременно и канцлером");
 
-                president.isPresident = false;
-                president = value;
                 president.isPresident = true;
+                president = value;
             }
         }
         private Player _cancellor;
@@ -35,13 +57,16 @@ namespace server
             private set
             {
                 if (President == _cancellor)
-                    throw new Exception("Президент не может быть одновременно и канцлером");
+                    throw new ArgumentException("Президент не может быть одновременно и канцлером");
                 if (_cancellor.wereCancellor)
-                    throw new Exception("Невозможно выбрать канцлером данного игрока, так как он был канцлером на прошлом ходу.");
-                
-                _cancellor.isChancellor = false;
-                _cancellor = value;
+                    throw new ArgumentException("Невозможно выбрать канцлером данного игрока, так как он был канцлером на прошлом ходу.");
+
+
+                if (_cancellor.role == RoleType.Crokodile && _accepted._croco >= 3)
+                    throw new ApplicationException("Крокодилы победили");
+
                 _cancellor.isChancellor = true;
+                _cancellor = value;
             }
         }
 
@@ -127,10 +152,13 @@ namespace server
                 var playerNum = _rand.Next(players.Count);
                 _prev_pres = playerNum;
                 _true_prev_pres = playerNum;
+                players[playerNum].isPresident = true;
                 President = players[playerNum];
             }
             else
             {
+                players[_prev_pres].isPresident = false;
+
                 // Президент передается по кругу.
                 if (_prev_pres + 1 == players.Count)
                     _prev_pres = 0;
@@ -144,7 +172,14 @@ namespace server
             /* Меняет поле Cancellor */
             if (Round != 1)
             {
+                Cancellor.isChancellor = false;
+
                 bool? resp = await WaitVotes(Events.CHOOSE_CANCELLOR);
+                // Президент передается по кругу.
+                if (_prev_pres + 1 == players.Count)
+                    _prev_pres = 0;
+                else
+                    _prev_pres++;
 
                 if ((bool)resp)
                     Cancellor = players[(int)President.PlayerNumCancellor];
@@ -156,65 +191,80 @@ namespace server
                 }
             }
         }
-        private void waitAllPlayers()
-        {
-            /* Проверяет наличие события старта.
-             * Если игроков не хватает - выкидывает ошибку */
-        }
-        private void setRoles()
-        {
-            /* Случайно устанавливает всем роли */
-        }
-        private void giveCardsPresident()
+        private async void giveCardsPresident()
         {
             /* Меняет поле Cards у игрока */
+            var Cards = new List<Card>(3);
+            for (int i = 0; i < 3; i++)
+            {
+                var isLiberal = generatePartyCard();
+                Cards.Add(new Card(isLiberal));
+            }
+            President.cards = Cards;
+
+            // Нужно подождать выбора игрока, добавить флаг готовности?
         }
-        private void giveCardsCancellor()
+        private async void giveCardsCancellor()
         {
             /* Меняет поле Cards у президента и перекидывает их канцлеру */
+            Cancellor.cards = President.cards;
         }
         private void veto()
         {
             /* Проверяет, есть ли право Вето. Если есть, то запускает голосование и обнуляет карту, которую приняли. */
         }
+        public bool generatePartyCard()
+        {
+            var digit = _rand.NextDouble();
+            bool isLiberal = true;
+            // всего 17 карт, из них 6 - либеральные, 11 фашистские
+            // Если digit / 17 > 6 / 17, то это фашистский закон, иначе - либеральный
+            if ((digit / 17) > (6 / 17))
+                isLiberal = false;
+
+            return isLiberal;
+        }
         private void acceptLaw(bool generateCard)
         {
             /* Принимает карту. Меняет поле AcceptedLaws и CurrentCard. Если в поле CurrentCard null, то ничего не меняет. 
              * Если установлен флаг generateCard - принимается случайный закон */
+            if (generateCard)
+            {
+                var isLiberal = generatePartyCard();
+                CurrentCard = new Card(isLiberal);
+            }
+
+            _accepted.Add(CurrentCard);
         }
         private void showParty()
         {
             /* Проверяет, выполнены ли условия для показа партии. Если да, то запускает процедуру показа партии */
+
         }
-        private void killPresident()
+        private async void killByPresident()
         {
             /* Проверяет, выполнены ли условия для убийства игрока президентом. Если да, то запускает процедуру убийства игрока */
-        }
-        private void checkWin()
-        {
-            /* Проверяет условия завершения игры.
-             * Игра завершена если:
-             * 1) канцлером выбрали крокодила, когда фашистских законов больше трёх 
-             * 2) карт одной или другой партии равно числу для выигрыша.
-             * 3) количество раундов не превысило критического.
-             * 4) все игроки отключены.
-             */
+            if (!(_accepted._croco == 4 && _killed == 0) || !(_accepted._croco == 5 && _killed == 1))
+                return;
+
+            // Ждем, когда президент выберет
+            var player = players[(int)President.KillPlayer];
+            if (player.role == RoleType.Crokodile)
+                throw new AccessViolationException("Либералы выиграли");
+
+            players[(int)President.KillPlayer] = null;
+            _killed++;
+            }
         }
 
         public async void play()
         {
-            // field isReady
-            waitAllPlayers();
-            setRoles();
-
             while (true)
             {
                 // field isPresident
                 choosePresident();
-                acceptLaw(true);
                 // fields isCancellor, wereCancellor
                 chooseCancellor();
-                checkWin();
 
                 // fields with cards
                 giveCardsPresident();
@@ -222,13 +272,12 @@ namespace server
                 giveCardsCancellor();
                 chooseCancellor();
 
-                showParty();
-                killPresident();
                 veto();
 
                 acceptLaw(false);
 
-                checkWin();
+                showParty();
+                killByPresident();
                 Round++;
             }
         }
