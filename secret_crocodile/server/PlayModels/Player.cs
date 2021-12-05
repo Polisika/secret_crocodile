@@ -16,6 +16,7 @@ namespace server
         }
         public int? PlayerNumCancellor { get; set; } = null;
         public int? KillPlayer { get; set; } = null;
+        public int? ShowParty { get; set; } = null;
         public RoleType role { get; set; }
         public Party party { get; set; }
         public bool isPresident { get; set; }
@@ -23,7 +24,7 @@ namespace server
         public bool wereCancellor { get; set; }
         public bool? vote { get; set; } = null;
         public List<Card> cards;
-
+        public bool? partyReady { get; set; } = null;
         public void DropCard(int index)
         {
             cards.RemoveAt(index);

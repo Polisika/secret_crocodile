@@ -143,7 +143,7 @@ namespace server
             Event = Events.NONE;
             return (int)President.PlayerNumCancellor;
         }
-        private async void choosePresident()
+        private async Task choosePresident()
         {
             /* Меняет поле President и players */
             if (Round == 1)
@@ -166,7 +166,7 @@ namespace server
                     _prev_pres++;
             }
         }
-        private async void chooseCancellor()
+        private async Task chooseCancellor()
         {
             Cancellor = players[await WaitVoteCancellor()];
             /* Меняет поле Cancellor */
@@ -191,7 +191,7 @@ namespace server
                 }
             }
         }
-        private async void giveCardsPresident()
+        private async Task giveCardsPresident()
         {
             /* Меняет поле Cards у игрока */
             var Cards = new List<Card>(3);
@@ -204,14 +204,20 @@ namespace server
 
             // Нужно подождать выбора игрока, добавить флаг готовности?
         }
-        private async void giveCardsCancellor()
+        private async Task giveCardsCancellor()
         {
             /* Меняет поле Cards у президента и перекидывает их канцлеру */
             Cancellor.cards = President.cards;
         }
-        private void veto()
+        private async Task veto()
         {
             /* Проверяет, есть ли право Вето. Если есть, то запускает голосование и обнуляет карту, которую приняли. */
+            // ждем когда будет vote не null
+            if (_accepted._croco == 5)
+            {
+                if ((bool)President.vote && (bool)Cancellor.vote)
+                    CurrentCard = null;
+            }
         }
         public bool generatePartyCard()
         {
@@ -233,51 +239,55 @@ namespace server
                 var isLiberal = generatePartyCard();
                 CurrentCard = new Card(isLiberal);
             }
-
-            _accepted.Add(CurrentCard);
+            if (!(CurrentCard is null))
+                _accepted.Add(CurrentCard);
         }
-        private void showParty()
+        private async Task showParty()
         {
             /* Проверяет, выполнены ли условия для показа партии. Если да, то запускает процедуру показа партии */
-
+            if (_accepted._croco == 3 && !_wasShowParty)
+            {
+                // Ждем, когда президент выберет
+                // Показываем этому игроку партию
+                _wasShowParty = true;
+            }
         }
-        private async void killByPresident()
+        private async Task killByPresident()
         {
             /* Проверяет, выполнены ли условия для убийства игрока президентом. Если да, то запускает процедуру убийства игрока */
-            if (!(_accepted._croco == 4 && _killed == 0) || !(_accepted._croco == 5 && _killed == 1))
-                return;
+            if ((_accepted._croco == 4 && _killed == 0) || (_accepted._croco == 5 && _killed == 1))
+            {
+                // Ждем, когда президент выберет
+                var player = players[(int)President.KillPlayer];
+                if (player.role == RoleType.Crokodile)
+                    throw new AccessViolationException("Либералы выиграли");
 
-            // Ждем, когда президент выберет
-            var player = players[(int)President.KillPlayer];
-            if (player.role == RoleType.Crokodile)
-                throw new AccessViolationException("Либералы выиграли");
-
-            players[(int)President.KillPlayer] = null;
-            _killed++;
+                players[(int)President.KillPlayer] = null;
+                _killed++;
             }
         }
 
-        public async void play()
+        public async Task play()
         {
             while (true)
             {
                 // field isPresident
-                choosePresident();
+                await choosePresident();
                 // fields isCancellor, wereCancellor
-                chooseCancellor();
+                await chooseCancellor();
 
                 // fields with cards
-                giveCardsPresident();
-                choosePresident();
-                giveCardsCancellor();
-                chooseCancellor();
+                await giveCardsPresident();
+                await choosePresident();
+                await giveCardsCancellor();
+                await chooseCancellor();
 
-                veto();
+                await veto();
 
                 acceptLaw(false);
 
-                showParty();
-                killByPresident();
+                await showParty();
+                await killByPresident();
                 Round++;
             }
         }

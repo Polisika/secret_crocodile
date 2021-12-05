@@ -4,8 +4,4 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\secret_crocodile\secret_crocodile.csproj" />
-  </ItemGroup>
-
 </Project>
