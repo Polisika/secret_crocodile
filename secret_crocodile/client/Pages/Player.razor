@@ -1,0 +1,44 @@
+﻿@inject HttpClient Http
+
+@if (@role != "")
+{
+    <h3>Your num: @num</h3>
+    <h3>Your role: @role</h3>
+    @if (@anotherNum != "")
+    { 
+    <h3>Num of your ally: @anotherNum</h3>
+    }
+}
+else
+{
+    <p>Loading...</p>
+}
+
+@code {
+    private String role = "";
+    private String anotherNum = "";
+    [Parameter]
+    public String num { get; set; } = "";
+    [Parameter]
+    public string host { get; set; } = "http://localhost:5000";
+    private async Task GetRole()
+    {
+        try
+        {
+            role = await Http.GetStringAsync(host + "/get_role/" + num);
+            if (role == "Fascist")
+                anotherNum = await Http.GetStringAsync(host + "/get_num/1"); // query fachist num
+            else if (role == "Crokodile")
+                anotherNum = await Http.GetStringAsync(host + "/get_num/0"); // query croco num
+        }
+
+        catch (Exception e)
+        {
+            role = e.Message;
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        await GetRole();
+    }
+}

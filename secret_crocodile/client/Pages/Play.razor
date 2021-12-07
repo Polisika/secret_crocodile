@@ -1,0 +1,87 @@
+@page "/play"
+@inject HttpClient Http
+
+@if (!(@exp is null))
+{
+    <p>Error occured: @exp.Message</p>
+}
+
+@if (@num != "")
+{
+    @if (!@started)
+    {
+        <div>Your num: @num</div>
+        @if (@num == "0")
+        {
+            <button @onclick="Start">Start</button>
+        }
+        else
+        {
+            <p>Waiting start...</p>
+        }
+    }
+    }
+@if (@started)
+{
+    <Player num=@num host=@host />
+}
+
+@code {
+    private string host = "http://localhost:5000";
+    private String num = "";
+    private Exception? exp = null;
+    private bool started = false;
+
+    private async Task Start()
+    {
+        try
+        {
+            await Http.GetStringAsync(host + "/start");
+            await Task.Delay(500);
+            started = true;
+        }
+        catch (Exception e)
+        {
+            exp = e;
+        }
+    }
+
+    private async Task waitAndBleed()
+    {
+        try
+        {
+            while (true)
+            {
+                await Task.Delay(2000);
+
+                string resp = await Http.GetStringAsync(host + "/is_started");
+                if (resp != "0")
+                {
+                    this.started = true;
+                    StateHasChanged();
+                    break;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            exp = e;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            num = await Http.GetStringAsync(host + "/entry");
+        }
+        catch (Exception e)
+        {
+            exp = e;
+        }
+        if (num != "0")
+        {
+            Task k = waitAndBleed();
+        }
+    }
+}

@@ -70,7 +70,10 @@ namespace server
             }
         }
 
-        public Session(int count)
+        public Session()
+        {
+        }
+        public void StartSession(int count)
         {
             var rand = new Random();
             this._rand = rand;
@@ -79,7 +82,7 @@ namespace server
             int helper_croco = rand.Next(count);
             while (helper_croco == crocodile)
                 helper_croco = rand.Next(count);
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i <= count; i++)
             {
                 if (crocodile == i)
                     players.Add(new Player(RoleType.Crokodile, Party.Fascist));
