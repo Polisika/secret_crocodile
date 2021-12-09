@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace server
 {
-
+    // C:\Users\karasyuk.2018\source\repos\secret_crocodile\secret_crocodile\server\bin\Debug\netcoreapp3.1
     public class Startup
     {
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -40,6 +40,8 @@ namespace server
                     {
                         session.StartSession(count);
                         await context.Response.WriteAsync(count.ToString());
+                        await Task.Delay(5000);
+                        Task k = session.play();
                         Console.WriteLine("Session started");
                     }
                     catch (Exception e)
@@ -107,6 +109,40 @@ namespace server
                         Console.WriteLine("Меня пытаются взломать :(");
                         await context.Response.WriteAsync("OMG cheater");
                     }
+                });
+
+                endpoints.MapGet("/get_info/{num:int}", async context =>
+                {
+                    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                    int num = int.Parse((string)context.Request.RouteValues["num"]);
+
+                    string info = "";
+                    var player = session.players[num];
+
+                    if (player.isChancellor)
+                        info += "1";
+                    else
+                        info += "0";
+
+                    if (player.isPresident)
+                        info += "1";
+                    else
+                        info += "0";
+
+                    if (player.wereCancellor)
+                        info += "1";
+                    else
+                        info += "0";
+
+                    foreach (var card in player.cards)
+                        if (card.isLiberal)
+                            info += "1";
+                        else
+                            info += "0";
+
+                    Console.WriteLine("Пришли за информацией: " + num.ToString() + ". Вернул: " + info);
+
+                    await context.Response.WriteAsync(info);
                 });
             });
         }

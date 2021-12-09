@@ -27,6 +27,7 @@ namespace server
 
     public class Session
     {
+        public int whowin = 0;  // 1 - крокодил, 2 - либералы
         private AcceptedLaws _accepted;
         private Card CurrentCard { get; set; }
 
@@ -135,16 +136,22 @@ namespace server
             int i = 0;
             while (President.PlayerNumCancellor is null)
             {
+                if (i == 0 || i == 10)
+                    Console.WriteLine("Ждём выбора канцлера...");
                 i++;
                 await Task.Delay(1000);
                 if (i == 15)
                 {
+                    int num = _rand.Next(players.Count);
+                    Console.WriteLine("Время вышло, канцлер выбран случайно: " + num.ToString());
                     Event = Events.NONE;
-                    return _rand.Next(players.Count);
+                    return num;
                 }
             }
             Event = Events.NONE;
-            return (int)President.PlayerNumCancellor;
+            int num = (int)President.PlayerNumCancellor;
+            Console.WriteLine("Канцлер выбран: " + num.ToString());
+            return num;
         }
         private async Task choosePresident()
         {
@@ -153,6 +160,7 @@ namespace server
             {
                 // На первом раунде президент выбирается без голосования.
                 var playerNum = _rand.Next(players.Count);
+                Console.WriteLine("Выбран президент: " + playerNum);
                 _prev_pres = playerNum;
                 _true_prev_pres = playerNum;
                 players[playerNum].isPresident = true;
@@ -161,7 +169,7 @@ namespace server
             else
             {
                 players[_prev_pres].isPresident = false;
-
+                Console.WriteLine(_prev_pres.ToString() + " перестал быть президентом");
                 // Президент передается по кругу.
                 if (_prev_pres + 1 == players.Count)
                     _prev_pres = 0;
@@ -272,26 +280,39 @@ namespace server
 
         public async Task play()
         {
-            while (true)
+            try
             {
-                // field isPresident
-                await choosePresident();
-                // fields isCancellor, wereCancellor
-                await chooseCancellor();
+                while (true)
+                {
+                    Console.WriteLine("Начало " + Round.ToString() + " раунда");
+                    // field isPresident
+                    await choosePresident();
+                    // fields isCancellor, wereCancellor
+                    await chooseCancellor();
 
-                // fields with cards
-                await giveCardsPresident();
-                await choosePresident();
-                await giveCardsCancellor();
-                await chooseCancellor();
+                    // fields with cards
+                    await giveCardsPresident();
+                    await choosePresident();
+                    await giveCardsCancellor();
+                    await chooseCancellor();
 
-                await veto();
+                    await veto();
 
-                acceptLaw(false);
+                    acceptLaw(false);
 
-                await showParty();
-                await killByPresident();
-                Round++;
+                    await showParty();
+                    await killByPresident();
+                    Console.WriteLine("Конец " + Round.ToString() + " раунда");
+                    Round++;
+                }
+            }
+            catch (ApplicationException)
+            {
+                whowin = 1;
+            }
+            catch (AccessViolationException)
+            {
+                whowin = 2;
             }
         }
     }

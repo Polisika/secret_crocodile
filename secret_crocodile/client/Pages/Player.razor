@@ -8,6 +8,30 @@
     { 
     <h3>Num of your ally: @anotherNum</h3>
     }
+    @if (@isPresident)
+    { 
+    <h3>You are president</h3>
+    }
+    @if (@isCancellor)
+    { 
+    <h3>You are chancellor</h3>
+    }
+    @if (Cards.Count > 0)
+    {
+    <ol>Your cards: 
+        @for (int i = 0; i < Cards.Count; i++)
+        {
+            @if (Cards[i])
+            {
+            <li style="color:red">Croco</li>
+            }
+            else
+            { 
+            <li style="color:cornflowerblue">Liberal</li>
+            }
+        }
+    </ol>
+    }
 }
 else
 {
@@ -17,6 +41,10 @@ else
 @code {
     private String role = "";
     private String anotherNum = "";
+    private bool isPresident = false;
+    private bool isCancellor = false;
+    private bool wereCancellor = false;
+    private List<bool> Cards = new List<bool>();
     [Parameter]
     public String num { get; set; } = "";
     [Parameter]
@@ -37,8 +65,34 @@ else
             role = e.Message;
         }
     }
+    private async Task GetInfo()
+    {
+        while (true)
+        {
+            try
+            {
+                string info = await Http.GetStringAsync(host + "/get_info/" + num);
+                isPresident = info[1] == '1';
+                isCancellor = info[0] == '1';
+                wereCancellor = info[2] == '1';
+                if (info.Length == 5)
+                {
+                    Cards.Add(info[3] == '1');
+                    Cards.Add(info[4] == '1');
+                }
+                if (info.Length == 6)
+                    Cards.Add(info[5] == '1');
+
+                StateHasChanged();
+                await Task.Delay(1000);
+            }
+            catch (Exception)
+            { }
+        }
+    }
     protected override async Task OnInitializedAsync()
     {
         await GetRole();
+        Task k = GetInfo();
     }
 }
