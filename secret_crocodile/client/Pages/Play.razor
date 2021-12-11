@@ -3,7 +3,7 @@
 
 @if (!(@exp is null))
 {
-    <p>Ошибка: @exp.Message</p>
+    <p>Error: @exp.Message</p>
 }
 
 @if (@e == "")
@@ -22,7 +22,7 @@
         }
         else
         {
-            <p>Ожидаем старта...</p>
+            <p>Wait start...</p>
         }
     }
     }
@@ -40,7 +40,7 @@
 
     private async Task Start()
     {
-        e = "Нельзя начать игру, когда в игре меньше 5 игроков.";
+        e = "You cant start the game, because in game less than 5 players.";
         StateHasChanged();
         try
         {
