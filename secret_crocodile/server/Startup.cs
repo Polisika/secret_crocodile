@@ -40,8 +40,8 @@ namespace server
                     {
                         session.StartSession(count);
                         await context.Response.WriteAsync(count.ToString());
-                        await Task.Delay(5000);
                         Task k = session.play();
+                        await Task.Delay(500);
                         Console.WriteLine("Session started");
                     }
                     catch (Exception e)
@@ -139,10 +139,24 @@ namespace server
                             info += "1";
                         else
                             info += "0";
-
-                    Console.WriteLine("Пришли за информацией: " + num.ToString() + ". Вернул: " + info);
+                    if (info.Length != 3)
+                        Console.WriteLine("Пришли за информацией: " + num.ToString() + ". Вернул: " + info);
 
                     await context.Response.WriteAsync(info);
+                });
+                endpoints.MapGet("/set_cancellor/{num:int}", async context =>
+                {
+                    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                    int num = int.Parse((string)context.Request.RouteValues["num"]);
+                    Console.WriteLine("Канцлер выбрал: " + num.ToString());
+                    if (session.players[num].wereCancellor)
+                        await context.Response.WriteAsync("omfg");
+                    else
+                    {
+                        Console.WriteLine("Назначил " + num.ToString() + " канцлером");
+                        session.President.PlayerNumCancellor = num;
+                        await context.Response.WriteAsync("ok");
+                    }
                 });
             });
         }

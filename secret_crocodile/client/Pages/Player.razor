@@ -9,8 +9,23 @@
     <h3>Num of your ally: @anotherNum</h3>
     }
     @if (@isPresident)
-    { 
+    {
     <h3>You are president</h3>
+        @if (!(@choosed_president))
+        {   
+            // ЗДЕСЬ В i ПЕРЕДАЕТСЯ В МЕТОД ПЯТЕРКА
+            @for (int i = 0; i < 5; i++)
+            {
+                @if (i.ToString() != num)
+                {
+                    <button @onclick="(async () => await choosed_cancellor(i))">Player num: @i</button>
+                }
+            }
+            @if (@errors != "")
+            {
+                <p style="color:red">@errors</p>
+            }
+        }
     }
     @if (@isCancellor)
     { 
@@ -18,7 +33,7 @@
     }
     @if (Cards.Count > 0)
     {
-    <ol>Your cards: 
+    <ol>Choose one, which need drop: 
         @for (int i = 0; i < Cards.Count; i++)
         {
             @if (Cards[i])
@@ -39,6 +54,8 @@ else
 }
 
 @code {
+    private string errors = "";
+    private bool choosed_president = false;
     private String role = "";
     private String anotherNum = "";
     private bool isPresident = false;
@@ -71,6 +88,7 @@ else
         {
             try
             {
+                Cards.Clear();
                 string info = await Http.GetStringAsync(host + "/get_info/" + num);
                 isPresident = info[1] == '1';
                 isCancellor = info[0] == '1';
@@ -81,7 +99,11 @@ else
                     Cards.Add(info[4] == '1');
                 }
                 if (info.Length == 6)
+                {
+                    Cards.Add(info[3] == '1');
+                    Cards.Add(info[4] == '1');
                     Cards.Add(info[5] == '1');
+                }
 
                 StateHasChanged();
                 await Task.Delay(1000);
@@ -94,5 +116,19 @@ else
     {
         await GetRole();
         Task k = GetInfo();
+    }
+    private async Task choosed_cancellor(int i)
+    {
+        string resp = await Http.GetStringAsync(host + "/set_cancellor/" + i.ToString());
+        if (resp == "omfg")
+        {
+            choosed_president = false;
+            errors = "Вы выбрали игрока, который уже был канцлером";
+        }
+        else
+        {
+            choosed_president = true;
+            errors = "";
+        }
     }
 }

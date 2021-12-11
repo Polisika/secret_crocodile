@@ -3,7 +3,12 @@
 
 @if (!(@exp is null))
 {
-    <p>Error occured: @exp.Message</p>
+    <p>Ошибка: @exp.Message</p>
+}
+
+@if (@e == "")
+{ 
+    <p>@e</p>
 }
 
 @if (@num != "")
@@ -17,7 +22,7 @@
         }
         else
         {
-            <p>Waiting start...</p>
+            <p>Ожидаем старта...</p>
         }
     }
     }
@@ -31,14 +36,19 @@
     private String num = "";
     private Exception? exp = null;
     private bool started = false;
+    private string e = "";
 
     private async Task Start()
     {
+        e = "Нельзя начать игру, когда в игре меньше 5 игроков.";
+        StateHasChanged();
         try
         {
             await Http.GetStringAsync(host + "/start");
-            await Task.Delay(500);
             started = true;
+            e = "";
+            await Task.Delay(200);
+            StateHasChanged();
         }
         catch (Exception e)
         {
