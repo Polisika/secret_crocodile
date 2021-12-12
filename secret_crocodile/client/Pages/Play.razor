@@ -6,7 +6,7 @@
     <p>Error: @exp.Message</p>
 }
 
-@if (@e == "")
+@if (@e != "")
 { 
     <p>@e</p>
 }
@@ -32,7 +32,7 @@
 }
 
 @code {
-    private string host = "http://localhost:5000";
+    private string host = "http://localhost:9854";
     private String num = "";
     private Exception? exp = null;
     private bool started = false;
@@ -44,16 +44,19 @@
         StateHasChanged();
         try
         {
-            await Http.GetStringAsync(host + "/start");
-            started = true;
-            e = "";
-            await Task.Delay(200);
-            StateHasChanged();
+            var resp = await Http.GetStringAsync(host + "/start");
+            if (resp != "Need more players.")
+            {
+                started = true;
+                e = "";
+                await Task.Delay(200);
+            }
         }
         catch (Exception e)
         {
             exp = e;
         }
+        StateHasChanged();
     }
 
     private async Task waitAndBleed()

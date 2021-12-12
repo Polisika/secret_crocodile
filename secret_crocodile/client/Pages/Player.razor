@@ -6,33 +6,33 @@
     {
         @if (who_win == 1)
         {
-            <h1 class="text-danger">CROCO WON</h1>
+            <h1 class="display-1 text-danger">CROCO WON</h1>
         }
         else
         {
-            <h1 style="color: darkblue">LIBERALS WON</h1>
+            <h1 class="display-1" style="color: darkblue">LIBERALS WON</h1>
         }
     }
     else
     {
-        <h3>Your num: @num</h3>
-        <h3>Your role: @role</h3>
-        <h3 style="color: darkblue">Accepted croco laws: @accepted_c_laws</h3>
-        <h3 style="color: firebrick">Accepted liberal laws: @accepted_l_laws</h3>
+        <h3 class="display-6">Your num: @num</h3>
+        <h3 class="display-6">Your role: @role</h3>
+        <h3 class="display-6" style="color: firebrick">Accepted croco laws: @accepted_c_laws</h3>
+        <h3 class="display-6" style="color: darkblue">Accepted liberal laws: @accepted_l_laws</h3>
         @if (@anotherNum != "")
         {
-            <h3>Num of your ally: @anotherNum</h3>
+            <h3 class="display-6">Num of your ally: @anotherNum</h3>
         }
         @if (@isPresident)
         {
-            <h3>You are president</h3>
+            <h3 class="display-6">You are president</h3>
             @if (!(@choosed_president))
             {
-                <input @bind="Choosed" />
+                <input class="form-control" @bind="Choosed" />
                 <span class="text-danger">@validation_message</span>
                 @if (@_choosed != 6)
                 {
-                    <button @onclick="choosed_cancellor">Make @Choosed player chancellor</button>
+                    <button class="btn btn-danger" @onclick="choosed_cancellor">Make @Choosed player chancellor</button>
                 }
                 @if (@errors != "")
                 {
@@ -46,39 +46,39 @@
         }
         @if (@isCancellor)
         {
-            <h3>You are chancellor</h3>
+            <h3 class="display-6">You are chancellor</h3>
         }
-        @if (Cards.Count > 0 && !card_dropped)
+        @if (@Cards.Count > 0)
         {
-            <ol>
+            <ol class="list-group list-group-numbered">
                 Choose one, which need drop:
                 @for (int i = 0; i < Cards.Count; i++)
                 {
-                    @if (Cards[i])
+                    @if (@Cards[i])
                     {
-                        <li style="color:red">Croco</li>
+                        <li class="list-group-item" style="color:cornflowerblue">Liberal</li>
                     }
                     else
                     {
-                        <li style="color:cornflowerblue">Liberal</li>
+                        <li class="list-group-item" style="color:red">Croco</li>
                     }
                 }
             </ol>
             
-            <input @bind="Drop_Card" />
+            <input class="form-control" @bind="Drop_Card" />
             <p>Enter num, then click to any area, you will see button</p>
             <span class="text-danger">@validation_message_card</span>
-            @if (Drop_Card != 4)
+            @if (@Drop_Card != 4)
             {
-                <button @onclick="DropCard">Drop @Drop_Card card</button>
+                <button class="btn btn-danger" @onclick="DropCard">Drop @Drop_Card card</button>
             }
         }
 
-        @if (president_num != null && !isPresident)
+        @if (@president_num != null && !@isPresident)
         {
             <p>Current president @president_num</p>
         }
-        @if (cancellor_num != null && !isCancellor)
+        @if (@cancellor_num != null && !@isCancellor)
         {
             @if (cancellor_num != 9)
             {
@@ -91,7 +91,6 @@ else
 {
     <p>Loading...</p>
 }
-
 @code {
     private int accepted_l_laws = 0;
     private int accepted_c_laws = 0;
@@ -120,7 +119,10 @@ else
     {
         get => _choosed; set
         {
-            if (value <= 4 && value >= 0 && value != int.Parse(num))
+            if (value <= 4 &&
+                value >= 0 &&
+                value != cancellor_num &&
+                value != int.Parse(num))
             {
                 validation_message = string.Empty;
                 _choosed = value;
@@ -142,10 +144,12 @@ else
     private int who_win = 0;
     private List<bool> Cards = new List<bool>();
 
+
     [Parameter]
     public String num { get; set; } = "";
     [Parameter]
-    public string host { get; set; } = "http://localhost:5000";
+    public string host { get; set; } = "http://localhost:9854";
+    private int were_cancellor_num = -1;
 
     private async Task GetRole()
     {
@@ -169,7 +173,7 @@ else
         {
             try
             {
-                Cards.Clear();
+                Cards = new List<bool>();
                 string info = await Http.GetStringAsync(host + "/get_info/" + num);
                 isPresident = info[1] == '1';
                 isCancellor = info[0] == '1';
@@ -222,17 +226,30 @@ else
         string resp = await Http.GetStringAsync(host + "/drop_card/" +
                                   (Drop_Card - 1).ToString() + "/" +
                                   num.ToString());
+        drop_card = 4;
     }
     private async Task GetPCWInfo()
     {
+        int i = 0;
         while (true)
         {
+            if (i == 3)
+            {
+                card_dropped = false;
+            }
             string p_num = await Http.GetStringAsync(host + "/who_president");
             president_num = int.Parse((p_num[0]).ToString());
+            if (isPresident != (president_num == int.Parse(num)))
+                card_dropped = false;
+            isPresident = president_num == int.Parse(num);
             cancellor_num = int.Parse((p_num[1]).ToString());
+            if (isCancellor != (cancellor_num == int.Parse(num)))
+                card_dropped = false;
+            isCancellor = cancellor_num == int.Parse(num);
             who_win = int.Parse((p_num[2]).ToString());
             accepted_l_laws = int.Parse((p_num[3]).ToString());
             accepted_c_laws = int.Parse((p_num[4]).ToString());
+
             StateHasChanged();
             await Task.Delay(2000);
         }

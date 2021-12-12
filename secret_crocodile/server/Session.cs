@@ -4,10 +4,10 @@ using System.Threading.Tasks;
 
 namespace server
 {
-    class AcceptedLaws
+    public class AcceptedLaws
     {
-        public List<Card> Accepted { get; private set; }
-        private int _liberal = 0;
+        public List<Card> Accepted { get; private set; } = new List<Card>();
+        public int _liberal = 0;
         public int _croco { get; private set; } = 0;
         public void Add(Card card)
         {
@@ -27,7 +27,7 @@ namespace server
     public class Session
     {
         public int whowin = 0;  // 1 - крокодил, 2 - либералы
-        private AcceptedLaws _accepted = new AcceptedLaws();
+        public AcceptedLaws _accepted = new AcceptedLaws();
         private Card CurrentCard { get; set; } = null;
 
         public List<Player?> players;
@@ -45,6 +45,8 @@ namespace server
             get => president;
             private set
             {
+                if (president != null)
+                    president.isPresident = false;
                 if (!(President is null) && !(_cancellor is null) && President == _cancellor)
                     throw new Exception("Ошибка назначения президента. Президент не может быть одновременно и канцлером");
 
@@ -58,10 +60,10 @@ namespace server
             get => _cancellor;
             private set
             {
+                if (_cancellor != null)
+                    _cancellor.isChancellor = false;
                 if (!(_cancellor == null))
                 {
-                    if (President == _cancellor)
-                        throw new ArgumentException("Ошибка назначения канцлера. Президент не может быть одновременно и канцлером");
                     if (_cancellor.wereCancellor)
                         throw new ArgumentException("Невозможно выбрать канцлером данного игрока, так как он был канцлером на прошлом ходу.");
                     if (_cancellor.role == RoleType.Crokodile && _accepted._croco >= 3)
@@ -142,19 +144,7 @@ namespace server
             int i = 0;
             while (President.PlayerNumCancellor is null)
             {
-                if (i == 0 || i == 10)
-                    Console.WriteLine("Ждём выбора канцлера...");
-                i++;
                 await Task.Delay(1000);
-                if (i == 15)
-                {
-                    int num_ = _rand.Next(players.Count);
-                    while (President == players[num_])
-                        num_ = _rand.Next(players.Count);
-                    Console.WriteLine("Время вышло, канцлер выбран случайно: " + num_.ToString());
-                    Event = Events.NONE;
-                    return num_;
-                }
             }
             Event = Events.NONE;
             int num = (int)President.PlayerNumCancellor;
@@ -183,6 +173,8 @@ namespace server
                     _prev_pres = 0;
                 else
                     _prev_pres++;
+                Console.WriteLine(_prev_pres + " - президент");
+                President = players[_prev_pres];
             }
         }
         private async Task chooseCancellor()
@@ -196,27 +188,6 @@ namespace server
             catch (ArgumentException e)
             {
                 Console.WriteLine(e.Message);
-            }
-            /* Меняет поле Cancellor */
-            if (Round != 1)
-            {
-                Cancellor.isChancellor = false;
-
-                bool? resp = await WaitVotes(Events.CHOOSE_CANCELLOR);
-                // Президент передается по кругу.
-                if (_prev_pres + 1 == players.Count)
-                    _prev_pres = 0;
-                else
-                    _prev_pres++;
-
-                if ((bool)resp)
-                    Cancellor = players[(int)President.PlayerNumCancellor];
-                // Если три раза не выбрали президента - принимается рандомный закон из кучи.
-                else if (Math.Abs(_true_prev_pres - _prev_pres) >= 3)
-                {
-                    acceptLaw(true);
-                    _true_prev_pres = _prev_pres;
-                }
             }
         }
         private async Task giveCardsPresident()
@@ -246,8 +217,8 @@ namespace server
                 await Task.Delay(500);
 
             Cancellor.cardDropped = false;
-            CurrentCard = Cancellor.cards[0];
-            Console.WriteLine("Текущая карта - " + Cancellor.cards[0].isLiberal.ToString());
+            CurrentCard = new Card(Cancellor.cards[0].isLiberal);
+            Console.WriteLine("Текущая карта - " + CurrentCard.isLiberal.ToString());
             Cancellor.cards = new List<Card>();
         }
         private async Task veto()
@@ -297,6 +268,7 @@ namespace server
             {
                 _accepted.Add(CurrentCard);
                 CurrentCard = null;
+                Console.WriteLine("Закон принят");
             }
             else
             {
@@ -316,22 +288,23 @@ namespace server
         }
         private async Task killByPresident()
         {
-            Console.WriteLine("Проверяем, выполнены ли условия убийства игрока");
-            /* Проверяет, выполнены ли условия для убийства игрока президентом. Если да, то запускает процедуру убийства игрока */
-            if ((_accepted._croco == 4 && _killed == 0) || (_accepted._croco == 5 && _killed == 1))
-            {
-                // Ждем, когда президент выберет
-                while (President.KillPlayer == null)
-                    await Task.Delay(300);
+            //Console.WriteLine("Проверяем, выполнены ли условия убийства игрока");
+            ///* Проверяет, выполнены ли условия для убийства игрока президентом. Если да, то запускает процедуру убийства игрока */
+            //if ((_accepted._croco == 4 && _killed == 0) || (_accepted._croco == 5 && _killed == 1))
+            //{
+            //    Console.WriteLine("Жду...");
+            //    // Ждем, когда президент выберет
+            //    while (President.KillPlayer == null)
+            //        await Task.Delay(300);
 
-                var player = players[(int)President.KillPlayer];
-                if (player.role == RoleType.Crokodile)
-                    throw new AccessViolationException("Либералы выиграли");
+            //    var player = players[(int)President.KillPlayer];
+            //    if (player.role == RoleType.Crokodile)
+            //        throw new AccessViolationException("Либералы выиграли");
 
-                players[(int)President.KillPlayer] = null;
-                _killed++;
-                President.KillPlayer = null;
-            }
+            //    players[(int)President.KillPlayer] = null;
+            //    _killed++;
+            //    President.KillPlayer = null;
+            //}
         }
 
         public async Task play()
@@ -362,10 +335,12 @@ namespace server
             }
             catch (ApplicationException)
             {
+                Console.WriteLine("Всё, ладно, победили, давай заканчивай.");
                 whowin = 1;
             }
             catch (AccessViolationException)
             {
+                Console.WriteLine("Ну победили крокодильчики, чего бухтеть-то.");
                 whowin = 2;
             }
             catch (Exception e)

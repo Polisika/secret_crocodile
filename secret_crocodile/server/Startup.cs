@@ -195,6 +195,8 @@ namespace server
                     else
                         res += "9";
                     res += session.whowin.ToString();
+                    res += session._accepted._liberal.ToString();
+                    res += session._accepted._croco.ToString();
                     await context.Response.WriteAsync(res);
                 });
                 endpoints.MapGet("/send_vote_kill/{num:int}", async context => { 
