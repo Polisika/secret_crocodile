@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace server
 {
     class AcceptedLaws
-    { 
+    {
         public List<Card> Accepted { get; private set; }
         private int _liberal = 0;
         public int _croco { get; private set; } = 0;
@@ -28,8 +27,8 @@ namespace server
     public class Session
     {
         public int whowin = 0;  // 1 - крокодил, 2 - либералы
-        private AcceptedLaws _accepted;
-        private Card CurrentCard { get; set; }
+        private AcceptedLaws _accepted = new AcceptedLaws();
+        private Card CurrentCard { get; set; } = null;
 
         public List<Player?> players;
         public int Round { get; set; } = 1;
@@ -48,7 +47,7 @@ namespace server
             {
                 if (!(President is null) && !(_cancellor is null) && President == _cancellor)
                     throw new Exception("Ошибка назначения президента. Президент не может быть одновременно и канцлером");
-                
+
                 president = value;
                 president.isPresident = true;
             }
@@ -231,7 +230,6 @@ namespace server
             }
             President.cards = Cards;
 
-            // Нужно подождать выбора игрока, добавить флаг готовности?
             Console.WriteLine("Ожидаем выбор президента...");
             while (!President.cardDropped)
                 await Task.Delay(500);
@@ -243,12 +241,13 @@ namespace server
             /* Меняет поле Cards у президента и перекидывает их канцлеру */
             Cancellor.cards = President.cards;
             President.cards = new List<Card>();
-            Console.WriteLine("Ожидаем выбор президента...");
+            Console.WriteLine("Ожидаем выбор канцлера...");
             while (!Cancellor.cardDropped)
                 await Task.Delay(500);
 
             Cancellor.cardDropped = false;
             CurrentCard = Cancellor.cards[0];
+            Console.WriteLine("Текущая карта - " + Cancellor.cards[0].isLiberal.ToString());
             Cancellor.cards = new List<Card>();
         }
         private async Task veto()
@@ -284,17 +283,20 @@ namespace server
         }
         private void acceptLaw(bool generateCard)
         {
+            Console.WriteLine("Принимаем закон...");
             /* Принимает карту. Меняет поле AcceptedLaws и CurrentCard. Если в поле CurrentCard null, то ничего не меняет. 
              * Если установлен флаг generateCard - принимается случайный закон */
             if (generateCard)
             {
                 var isLiberal = generatePartyCard();
                 CurrentCard = new Card(isLiberal);
+                _accepted.Add(CurrentCard);
+                CurrentCard = null;
             }
             else if (CurrentCard != null)
             {
-                CurrentCard = null;
                 _accepted.Add(CurrentCard);
+                CurrentCard = null;
             }
             else
             {
@@ -314,16 +316,21 @@ namespace server
         }
         private async Task killByPresident()
         {
+            Console.WriteLine("Проверяем, выполнены ли условия убийства игрока");
             /* Проверяет, выполнены ли условия для убийства игрока президентом. Если да, то запускает процедуру убийства игрока */
             if ((_accepted._croco == 4 && _killed == 0) || (_accepted._croco == 5 && _killed == 1))
             {
                 // Ждем, когда президент выберет
+                while (President.KillPlayer == null)
+                    await Task.Delay(300);
+
                 var player = players[(int)President.KillPlayer];
                 if (player.role == RoleType.Crokodile)
                     throw new AccessViolationException("Либералы выиграли");
 
                 players[(int)President.KillPlayer] = null;
                 _killed++;
+                President.KillPlayer = null;
             }
         }
 

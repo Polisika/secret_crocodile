@@ -32,6 +32,7 @@ namespace server
             app.UseEndpoints(endpoints =>
             {
                 int count = -1;
+                int l = 0;
                 Session session = new Session();
                 endpoints.MapGet("/start", async context =>
                 {
@@ -51,7 +52,6 @@ namespace server
                         Console.WriteLine("Session not started");
                     }
                 });
-
                 endpoints.MapGet("/entry", async context => {
                     if (!(session.players is null))
                         await context.Response.WriteAsync("Session started");
@@ -60,7 +60,6 @@ namespace server
                     context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
                     await context.Response.WriteAsync(count.ToString());
                 });
-
                 endpoints.MapGet("/get_role/{num:int}", async context =>
                 {
                     context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
@@ -68,7 +67,6 @@ namespace server
                     Console.WriteLine("Пришел запрос: num=" + param);
                     await context.Response.WriteAsync(session.players[int.Parse(param)].role.ToString());
                 });
-
                 endpoints.MapGet("/is_started", async context =>
                 {
                     context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
@@ -83,7 +81,6 @@ namespace server
                         await context.Response.WriteAsync("0");
                     }
                 });
-
                 endpoints.MapGet("/get_num/{role:int}", async context =>
                 {
                     Console.WriteLine("Пришли за номерами этих ребят...");
@@ -110,7 +107,6 @@ namespace server
                         await context.Response.WriteAsync("OMG cheater");
                     }
                 });
-                int l = 0;
                 endpoints.MapGet("/get_info/{num:int}", async context =>
                 {
                     context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
@@ -165,17 +161,17 @@ namespace server
                         await context.Response.WriteAsync("ok");
                     }
                 });
-
                 endpoints.MapGet("/drop_card/{card:int}/{num:int}", async context =>
                 {
                     context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
                     int card = int.Parse((string)context.Request.RouteValues["card"]);
                     int num = int.Parse((string)context.Request.RouteValues["num"]);
-
+                    
                     session.players[num].DropCard(card);
+
+                    Console.WriteLine("Игрок " + num.ToString() + " дропнул карту " + card.ToString());
                     await context.Response.WriteAsync("ok");
                 });
-
                 endpoints.MapGet("/send_vote_veto/{num:int}/{vote:int}", async context =>
                 {
                     context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
@@ -186,7 +182,6 @@ namespace server
                     await context.Response.WriteAsync("ok");
                     Console.WriteLine("Голос за право Вето пришел: " + vote.ToString() + " " + num.ToString());
                 });
-
                 endpoints.MapGet("/who_president", async context =>
                 {
                     context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
@@ -201,6 +196,9 @@ namespace server
                         res += "9";
                     res += session.whowin.ToString();
                     await context.Response.WriteAsync(res);
+                });
+                endpoints.MapGet("/send_vote_kill/{num:int}", async context => { 
+                    session.President.KillPlayer = int.Parse((string)context.Request.RouteValues["num"]);
                 });
             });
         }

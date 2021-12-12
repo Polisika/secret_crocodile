@@ -1,11 +1,17 @@
 ﻿@inject HttpClient Http
 
-<h3>Event: @EventName</h3>
-
+@if (EventName != "null")
+{
+    <h3>Event: @EventName</h3>
+}
 @if (EventName == "kill")
 {
     <input @bind="choose_num" />
     <span class="text-danger">@validation</span>
+    @if (choose_num != 6)
+    {
+        <button @onclick="send_kill">Kill @choose_num player</button>
+    }
 }
 else if (EventName == "veto")
 {
@@ -14,7 +20,7 @@ else if (EventName == "veto")
     @if (!sended_vote)
     {
         <button @onclick="(async () => await send_vote(true))">Yes</button>
-        <button @onclick="(async () => await send_vote(false))">Yes</button>
+        <button @onclick="(async () => await send_vote(false))">No</button>
     }
 }
 
@@ -53,8 +59,10 @@ else if (EventName == "veto")
         }
     }
     private async Task send_kill()
-    { 
+    {
         // TODO: новый метод
+        await Http.GetStringAsync(host + "/send_vote_kill/" + num.ToString());
+        EventName = "null";
         
     }
 

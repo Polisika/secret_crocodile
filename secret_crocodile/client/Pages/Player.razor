@@ -5,11 +5,11 @@
     @if (who_win != 0)
     {
         @if (who_win == 1)
-        { 
+        {
             <h1 class="text-danger">CROCO WON</h1>
         }
         else
-        { 
+        {
             <h1 style="color: darkblue">LIBERALS WON</h1>
         }
     }
@@ -20,66 +20,71 @@
         <h3 style="color: darkblue">Accepted croco laws: @accepted_c_laws</h3>
         <h3 style="color: firebrick">Accepted liberal laws: @accepted_l_laws</h3>
         @if (@anotherNum != "")
-    {
-        <h3>Num of your ally: @anotherNum</h3>
-    }
+        {
+            <h3>Num of your ally: @anotherNum</h3>
+        }
         @if (@isPresident)
-    {
-        <h3>You are president</h3>
-        @if (!(@choosed_president))
         {
-            <input @bind="Choosed" />
-            <span class="text-danger">@validation_message</span>
-            @if (@_choosed != 6)
+            <h3>You are president</h3>
+            @if (!(@choosed_president))
             {
-                <button @onclick="choosed_cancellor">Make @Choosed player chancellor</button>
+                <input @bind="Choosed" />
+                <span class="text-danger">@validation_message</span>
+                @if (@_choosed != 6)
+                {
+                    <button @onclick="choosed_cancellor">Make @Choosed player chancellor</button>
+                }
+                @if (@errors != "")
+                {
+                    <p class="text-danger">@errors</p>
+                }
             }
-            @if (@errors != "")
+            @if (game_event != string.Empty)
             {
-                <p class="text-danger">@errors</p>
+                <Event EventName="kill" host="@host" num="@num" />
             }
         }
-        @if (game_event != string.Empty)
-        {
-            <Event EventName="kill" host="@host" num="@num" />
-        }
-    }
         @if (@isCancellor)
-    {
-        <h3>You are chancellor</h3>
-    }
-        @if (Cards.Count > 0 && !card_dropped)
-    {
-        <ol>
-            Choose one, which need drop:
-            @for (int i = 0; i < Cards.Count; i++)
-            {
-                @if (Cards[i])
-                {
-                    <li style="color:red">Croco</li>
-                }
-                else
-                {
-                    <li style="color:cornflowerblue">Liberal</li>
-                }
-            }
-        </ol>
-        <input @bind="Drop_Card" />
-        <span class="text-danger">@validation_message_card</span>
-        @if (Drop_Card != 4)
         {
-            <button @onclick="DropCard">Drop @Drop_Card</button>
+            <h3>You are chancellor</h3>
         }
-    }
-    
+        @if (Cards.Count > 0 && !card_dropped)
+        {
+            <ol>
+                Choose one, which need drop:
+                @for (int i = 0; i < Cards.Count; i++)
+                {
+                    @if (Cards[i])
+                    {
+                        <li style="color:red">Croco</li>
+                    }
+                    else
+                    {
+                        <li style="color:cornflowerblue">Liberal</li>
+                    }
+                }
+            </ol>
+            
+            <input @bind="Drop_Card" />
+            <p>Enter num, then click to any area, you will see button</p>
+            <span class="text-danger">@validation_message_card</span>
+            @if (Drop_Card != 4)
+            {
+                <button @onclick="DropCard">Drop @Drop_Card card</button>
+            }
+        }
+
         @if (president_num != null && !isPresident)
         {
             <p>Current president @president_num</p>
         }
         @if (cancellor_num != null && !isCancellor)
         {
-            <p>Current cancellor @cancellor_num</p>
-        }
+            @if (cancellor_num != 9)
+            {
+                <p>Current cancellor @cancellor_num</p>
+            }        
+    }
     }
 }
 else
@@ -94,16 +99,18 @@ else
     private string validation_message_card = string.Empty;
     private bool card_dropped = false;
     private int drop_card = 4;
-    private int Drop_Card { get => drop_card;
+    private int Drop_Card
+    {
+        get => drop_card + 1;
         set
         {
-            if (value <= Cards.Count && value >= 0)
+            if (value <= Cards.Count && value > 0)
             {
-                drop_card = value;
+                drop_card = value - 1;
                 validation_message_card = string.Empty;
             }
             else
-                validation_message_card = "You need choose num from 0 to " + Cards.Count;
+                validation_message_card = "You need choose num from 1 to " + Cards.Count;
             StateHasChanged();
         }
     }
@@ -213,10 +220,11 @@ else
         Cards.Clear();
         StateHasChanged();
         string resp = await Http.GetStringAsync(host + "/drop_card/" +
-                                  Drop_Card.ToString() + "/" +
+                                  (Drop_Card - 1).ToString() + "/" +
                                   num.ToString());
     }
-    private async Task GetPCWInfo() {
+    private async Task GetPCWInfo()
+    {
         while (true)
         {
             string p_num = await Http.GetStringAsync(host + "/who_president");
