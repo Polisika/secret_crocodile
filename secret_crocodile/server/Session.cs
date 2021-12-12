@@ -91,11 +91,11 @@ namespace server
             for (int i = 0; i <= count; i++)
             {
                 if (crocodile == i)
-                    players.Add(new Player(RoleType.Crokodile, Party.Fascist));
+                    players.Add(new Player(RoleType.Crokodile, Party.Fascist, i));
                 else if (helper_croco == i)
-                    players.Add(new Player(RoleType.Fascist, Party.Fascist));
+                    players.Add(new Player(RoleType.Fascist, Party.Fascist, i));
                 else
-                    players.Add(new Player(RoleType.Liberal, Party.Liberal));
+                    players.Add(new Player(RoleType.Liberal, Party.Liberal, i));
             }
             this.players = players;
         }
@@ -105,19 +105,21 @@ namespace server
             Event = inner_event;
             while (true)
             {
+                int null_votes = 0;
                 foreach (var p in players)
-                    if (p.vote is null)
-                    {
-                        await Task.Delay(1);
-                        continue;
-                    }
-                break;
+                    if (p != null && p.vote == null)
+                        null_votes += 1;
+                if (null_votes == 0)
+                    break;
             }
             Event = Events.NONE;
 
             var votes = 0;
             foreach (var p in players)
             {
+                if (p == null)
+                    continue;
+
                 if (p.vote == false)
                     votes--;
                 else
@@ -130,9 +132,6 @@ namespace server
                 result = true;
             else
                 result = votes > 0;
-
-            foreach (var p in players)
-                p.vote = null;
 
             return result;
         }
@@ -233,20 +232,42 @@ namespace server
             President.cards = Cards;
 
             // Нужно подождать выбора игрока, добавить флаг готовности?
+            Console.WriteLine("Ожидаем выбор президента...");
+            while (!President.cardDropped)
+                await Task.Delay(500);
+            // Возвращаем в исходное состояние
+            President.cardDropped = false;
         }
         private async Task giveCardsCancellor()
         {
             /* Меняет поле Cards у президента и перекидывает их канцлеру */
             Cancellor.cards = President.cards;
+            President.cards = new List<Card>();
+            Console.WriteLine("Ожидаем выбор президента...");
+            while (!Cancellor.cardDropped)
+                await Task.Delay(500);
+
+            Cancellor.cardDropped = false;
+            CurrentCard = Cancellor.cards[0];
+            Cancellor.cards = new List<Card>();
         }
         private async Task veto()
         {
             /* Проверяет, есть ли право Вето. Если есть, то запускает голосование и обнуляет карту, которую приняли. */
-            // ждем когда будет vote не null
             if (_accepted._croco == 5)
             {
+                Console.WriteLine("ПРАВО ВЕТО! Ждём голосов президента и канцлера.");
+                while (President.vote != null && Cancellor.vote != null)
+                    await Task.Delay(500);
                 if ((bool)President.vote && (bool)Cancellor.vote)
+                {
+                    Console.WriteLine("Закон отклонён.");
                     CurrentCard = null;
+                }
+                else
+                    Console.WriteLine("Закон не отклонён");
+                President.vote = null;
+                Cancellor.vote = null;
             }
         }
         public bool generatePartyCard()
@@ -258,6 +279,7 @@ namespace server
             if (digit > (6.0 / 17.0))
                 isLiberal = false;
 
+            Console.WriteLine("Сгенерирован либеральный закон? " + isLiberal.ToString());
             return isLiberal;
         }
         private void acceptLaw(bool generateCard)
@@ -269,8 +291,16 @@ namespace server
                 var isLiberal = generatePartyCard();
                 CurrentCard = new Card(isLiberal);
             }
-            if (!(CurrentCard is null))
+            else if (CurrentCard != null)
+            {
+                CurrentCard = null;
                 _accepted.Add(CurrentCard);
+            }
+            else
+            {
+                for (int i = 0; i < 10; i++)
+                    Console.WriteLine("ОШИБКА! ЗАКОН NULL ПО НЕПРЕДВИДЕННЫМ ОБСТОЯТЕЛЬСТВАМ");
+            }
         }
         private async Task showParty()
         {

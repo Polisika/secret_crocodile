@@ -1,0 +1,73 @@
+﻿@inject HttpClient Http
+
+<h3>Event: @EventName</h3>
+
+@if (EventName == "kill")
+{
+    <input @bind="choose_num" />
+    <span class="text-danger">@validation</span>
+}
+else if (EventName == "veto")
+{
+    <h3>Do you wanna cancel last card?</h3>
+    <p>Last card: @LastCard</p>
+    @if (!sended_vote)
+    {
+        <button @onclick="(async () => await send_vote(true))">Yes</button>
+        <button @onclick="(async () => await send_vote(false))">Yes</button>
+    }
+}
+
+
+@code {
+    [Parameter]
+    public string LastCard { get; set; }
+    [Parameter]
+    public string EventName { get; set; }
+    [Parameter]
+    public string num { get; set; }
+    [Parameter]
+    public string host { get; set; }
+
+    // kill logic
+    private string validation = string.Empty;
+    private int choose_num = 6;
+    private int Choose
+    {
+        get => choose_num;
+        set
+        {
+            if (EventName == "kill")
+            {
+                if (value != int.Parse(num) && value >= 0 && value <= 4)
+                {
+                    choose_num = value;
+                    validation = string.Empty;
+                }
+                else
+                {
+                    validation = "Need choose player, num 0 <= num <= 4, but not youself";
+                }
+            }
+            StateHasChanged();
+        }
+    }
+    private async Task send_kill()
+    { 
+        // TODO: новый метод
+        
+    }
+
+    // veto logic
+    private bool sended_vote = false;
+    private async Task send_vote(bool vote)
+    {
+        sended_vote = true;
+        StateHasChanged();
+        string n = "0";
+        if (vote)
+            n = "1";
+        // TODO: новый метод
+        await Http.GetStringAsync(host + "/send_vote_veto/" + num.ToString() + "/" + n);
+    }
+}

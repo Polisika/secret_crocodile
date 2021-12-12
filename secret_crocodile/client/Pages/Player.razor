@@ -2,50 +2,84 @@
 
 @if (@role != "")
 {
-    <h3>Your num: @num</h3>
-    <h3>Your role: @role</h3>
-    @if (@anotherNum != "")
-    { 
-    <h3>Num of your ally: @anotherNum</h3>
-    }
-    @if (@isPresident)
+    @if (who_win != 0)
     {
-    <h3>You are president</h3>
+        @if (who_win == 1)
+        { 
+            <h1 class="text-danger">CROCO WON</h1>
+        }
+        else
+        { 
+            <h1 style="color: darkblue">LIBERALS WON</h1>
+        }
+    }
+    else
+    {
+        <h3>Your num: @num</h3>
+        <h3>Your role: @role</h3>
+        <h3 style="color: darkblue">Accepted croco laws: @accepted_c_laws</h3>
+        <h3 style="color: firebrick">Accepted liberal laws: @accepted_l_laws</h3>
+        @if (@anotherNum != "")
+    {
+        <h3>Num of your ally: @anotherNum</h3>
+    }
+        @if (@isPresident)
+    {
+        <h3>You are president</h3>
         @if (!(@choosed_president))
-        {   
-            // ЗДЕСЬ В i ПЕРЕДАЕТСЯ В МЕТОД ПЯТЕРКА
-            @for (int i = 0; i < 5; i++)
+        {
+            <input @bind="Choosed" />
+            <span class="text-danger">@validation_message</span>
+            @if (@_choosed != 6)
             {
-                @if (i.ToString() != num)
-                {
-                    <button @onclick="(async () => await choosed_cancellor(i))">Player num: @i</button>
-                }
+                <button @onclick="choosed_cancellor">Make @Choosed player chancellor</button>
             }
             @if (@errors != "")
             {
-                <p style="color:red">@errors</p>
+                <p class="text-danger">@errors</p>
             }
         }
-    }
-    @if (@isCancellor)
-    { 
-    <h3>You are chancellor</h3>
-    }
-    @if (Cards.Count > 0)
-    {
-    <ol>Choose one, which need drop: 
-        @for (int i = 0; i < Cards.Count; i++)
+        @if (game_event != string.Empty)
         {
-            @if (Cards[i])
-            {
-            <li style="color:red">Croco</li>
-            }
-            else
-            { 
-            <li style="color:cornflowerblue">Liberal</li>
-            }
+            <Event EventName="kill" host="@host" num="@num" />
         }
-    </ol>
+    }
+        @if (@isCancellor)
+    {
+        <h3>You are chancellor</h3>
+    }
+        @if (Cards.Count > 0 && !card_dropped)
+    {
+        <ol>
+            Choose one, which need drop:
+            @for (int i = 0; i < Cards.Count; i++)
+            {
+                @if (Cards[i])
+                {
+                    <li style="color:red">Croco</li>
+                }
+                else
+                {
+                    <li style="color:cornflowerblue">Liberal</li>
+                }
+            }
+        </ol>
+        <input @bind="Drop_Card" />
+        <span class="text-danger">@validation_message_card</span>
+        @if (Drop_Card != 4)
+        {
+            <button @onclick="DropCard">Drop @Drop_Card</button>
+        }
+    }
+    
+        @if (president_num != null && !isPresident)
+        {
+            <p>Current president @president_num</p>
+        }
+        @if (cancellor_num != null && !isCancellor)
+        {
+            <p>Current cancellor @cancellor_num</p>
+        }
     }
 }
 else
@@ -54,6 +88,41 @@ else
 }
 
 @code {
+    private int accepted_l_laws = 0;
+    private int accepted_c_laws = 0;
+    private string game_event = string.Empty;
+    private string validation_message_card = string.Empty;
+    private bool card_dropped = false;
+    private int drop_card = 4;
+    private int Drop_Card { get => drop_card;
+        set
+        {
+            if (value <= Cards.Count && value >= 0)
+            {
+                drop_card = value;
+                validation_message_card = string.Empty;
+            }
+            else
+                validation_message_card = "You need choose num from 0 to " + Cards.Count;
+            StateHasChanged();
+        }
+    }
+    private string validation_message = string.Empty;
+    private int _choosed = 6;
+    private int Choosed
+    {
+        get => _choosed; set
+        {
+            if (value <= 4 && value >= 0 && value != int.Parse(num))
+            {
+                validation_message = string.Empty;
+                _choosed = value;
+            }
+            else
+                validation_message = "Need choose player, num 0 <= num <= 4, but not youself";
+            StateHasChanged();
+        }
+    }
     private string errors = "";
     private bool choosed_president = false;
     private String role = "";
@@ -61,11 +130,16 @@ else
     private bool isPresident = false;
     private bool isCancellor = false;
     private bool wereCancellor = false;
+    private int? president_num = null;
+    private int? cancellor_num = null;
+    private int who_win = 0;
     private List<bool> Cards = new List<bool>();
+
     [Parameter]
     public String num { get; set; } = "";
     [Parameter]
     public string host { get; set; } = "http://localhost:5000";
+
     private async Task GetRole()
     {
         try
@@ -116,10 +190,11 @@ else
     {
         await GetRole();
         Task k = GetInfo();
+        Task j = GetPCWInfo();
     }
-    private async Task choosed_cancellor(int i)
+    private async Task choosed_cancellor()
     {
-        string resp = await Http.GetStringAsync(host + "/set_cancellor/" + i.ToString());
+        string resp = await Http.GetStringAsync(host + "/set_cancellor/" + Choosed.ToString());
         if (resp == "omfg")
         {
             choosed_president = false;
@@ -129,6 +204,29 @@ else
         {
             choosed_president = true;
             errors = "";
+        }
+        StateHasChanged();
+    }
+    private async Task DropCard()
+    {
+        card_dropped = true;
+        Cards.Clear();
+        StateHasChanged();
+        string resp = await Http.GetStringAsync(host + "/drop_card/" +
+                                  Drop_Card.ToString() + "/" +
+                                  num.ToString());
+    }
+    private async Task GetPCWInfo() {
+        while (true)
+        {
+            string p_num = await Http.GetStringAsync(host + "/who_president");
+            president_num = int.Parse((p_num[0]).ToString());
+            cancellor_num = int.Parse((p_num[1]).ToString());
+            who_win = int.Parse((p_num[2]).ToString());
+            accepted_l_laws = int.Parse((p_num[3]).ToString());
+            accepted_c_laws = int.Parse((p_num[4]).ToString());
+            StateHasChanged();
+            await Task.Delay(2000);
         }
     }
 }

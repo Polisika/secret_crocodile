@@ -110,7 +110,7 @@ namespace server
                         await context.Response.WriteAsync("OMG cheater");
                     }
                 });
-
+                int l = 0;
                 endpoints.MapGet("/get_info/{num:int}", async context =>
                 {
                     context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
@@ -118,6 +118,13 @@ namespace server
 
                     string info = "";
                     var player = session.players[num];
+
+                    if (player == null)
+                    {
+                        if (l++ % 25 == 0)
+                            Console.WriteLine("Игрок убит, информации нет.");
+                        return;
+                    }
 
                     if (player.isChancellor)
                         info += "1";
@@ -157,6 +164,43 @@ namespace server
                         session.President.PlayerNumCancellor = num;
                         await context.Response.WriteAsync("ok");
                     }
+                });
+
+                endpoints.MapGet("/drop_card/{card:int}/{num:int}", async context =>
+                {
+                    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                    int card = int.Parse((string)context.Request.RouteValues["card"]);
+                    int num = int.Parse((string)context.Request.RouteValues["num"]);
+
+                    session.players[num].DropCard(card);
+                    await context.Response.WriteAsync("ok");
+                });
+
+                endpoints.MapGet("/send_vote_veto/{num:int}/{vote:int}", async context =>
+                {
+                    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                    int vote = int.Parse((string)context.Request.RouteValues["vote"]);
+                    int num = int.Parse((string)context.Request.RouteValues["num"]);
+
+                    session.players[num].vote = vote == 1;
+                    await context.Response.WriteAsync("ok");
+                    Console.WriteLine("Голос за право Вето пришел: " + vote.ToString() + " " + num.ToString());
+                });
+
+                endpoints.MapGet("/who_president", async context =>
+                {
+                    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                    string res = "";
+                    if (session.President != null)
+                        res += session.President.num.ToString();
+                    else
+                        res += "9";
+                    if (session.Cancellor != null)
+                        res += session.Cancellor.num.ToString();
+                    else
+                        res += "9";
+                    res += session.whowin.ToString();
+                    await context.Response.WriteAsync(res);
                 });
             });
         }
