@@ -40,8 +40,7 @@
 
     private async Task Start()
     {
-        e = "You cant start the game, because in game less than 5 players.";
-        StateHasChanged();
+        e = "";
         try
         {
             var resp = await Http.GetStringAsync(host + "/start");
@@ -51,6 +50,8 @@
                 e = "";
                 await Task.Delay(200);
             }
+            else
+                e = "You cant start the game, because in game less than 5 players.";
         }
         catch (Exception e)
         {

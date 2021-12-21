@@ -335,12 +335,12 @@ namespace server
             }
             catch (ApplicationException)
             {
-                Console.WriteLine("Всё, ладно, победили, давай заканчивай.");
+                Console.WriteLine("Ну победили крокодильчики, чего бухтеть-то.");
                 whowin = 1;
             }
             catch (AccessViolationException)
             {
-                Console.WriteLine("Ну победили крокодильчики, чего бухтеть-то.");
+                Console.WriteLine("Всё, ладно, победили, давай заканчивай.");
                 whowin = 2;
             }
             catch (Exception e)
