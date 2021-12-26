@@ -64,7 +64,7 @@
             <input class="form-control" @bind="Drop_Card" />
             <p>Enter num, then click to any area, you will see button</p>
             <span class="text-danger">@validation_message_card</span>
-            @if (@Drop_Card != 4)
+            @if (@Drop_Card != 5)
             {
                 <button class="btn btn-danger" @onclick="DropCard">Drop @Drop_Card card</button>
             }
