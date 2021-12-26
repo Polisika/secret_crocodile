@@ -39,10 +39,6 @@
                     <p class="text-danger">@errors</p>
                 }
             }
-            @if (game_event != string.Empty)
-            {
-                <Event EventName="kill" host="@host" num="@num" />
-            }
         }
         @if (@isCancellor)
         {
@@ -146,9 +142,9 @@ else
 
 
     [Parameter]
-    public String num { get; set; } = "";
+    public String num { get; set; }
     [Parameter]
-    public string host { get; set; } = "http://localhost:9854";
+    public string host { get; set; }
     private int were_cancellor_num = -1;
 
     private async Task GetRole()
@@ -230,25 +226,20 @@ else
     }
     private async Task GetPCWInfo()
     {
-        int i = 0;
         while (true)
         {
-            if (i == 3)
-            {
-                card_dropped = false;
-            }
             string p_num = await Http.GetStringAsync(host + "/who_president");
+
             president_num = int.Parse((p_num[0]).ToString());
-            if (isPresident != (president_num == int.Parse(num)))
-                card_dropped = false;
-            isPresident = president_num == int.Parse(num);
-            cancellor_num = int.Parse((p_num[1]).ToString());
-            if (isCancellor != (cancellor_num == int.Parse(num)))
-                card_dropped = false;
-            isCancellor = cancellor_num == int.Parse(num);
+            cancellor_num = int.Parse((p_num[1]).ToString());  
             who_win = int.Parse((p_num[2]).ToString());
             accepted_l_laws = int.Parse((p_num[3]).ToString());
             accepted_c_laws = int.Parse((p_num[4]).ToString());
+
+            isPresident = president_num == int.Parse(num);
+            isCancellor = cancellor_num == int.Parse(num);
+            if (isCancellor != (cancellor_num == int.Parse(num)) || isPresident != (president_num == int.Parse(num)))
+                card_dropped = false;
 
             StateHasChanged();
             await Task.Delay(2000);
