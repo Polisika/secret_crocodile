@@ -3,7 +3,12 @@
 
 @if (!(@exp is null))
 {
-    <p>Error: @exp.Message</p>
+    <p>Error: @exp.StackTrace</p>
+}
+
+@if (name != string.Empty && started)
+{ 
+    <div>Your name: @name</div>
 }
 
 @if (@e != "")
@@ -16,6 +21,7 @@
     @if (!@started)
     {
         <div>Your num: @num</div>
+        <div>Your name: @name</div>
         @if (@num == "0")
         {
             <button @onclick="Start">Start</button>
@@ -25,18 +31,53 @@
             <p>Wait start...</p>
         }
     }
+}
+else
+{ 
+    <input @bind=@Name placeholder="Type your name (english)" title="Input your name" />
+    @if (error == string.Empty && name != string.Empty)
+    {
+    <button @onclick="get_num">Entry with name @name</button>
     }
+    else
+    {
+        <span>@error</span>
+    }
+}
 @if (@started)
 {
-    <Player num=@num host=@host />
+    <Player num=@num host=@host names=@names />
 }
 
 @code {
-    private string host = "http://51.250.22.95";
+    private string host = "http://localhost:9854";
     private String num = "";
     private Exception? exp = null;
     private bool started = false;
     private string e = "";
+    private string error = string.Empty;
+    private string name = string.Empty;
+    private string Name {
+        get => name;
+        set
+        {
+            bool valid = true;
+            foreach (char v in value)
+                if (!char.IsLetter(v))
+                    valid = false;
+            if (!valid)
+            {
+                error = "You can use only letters";
+            }
+            else
+            {
+                error = string.Empty;
+            }
+            name = value;
+            StateHasChanged();
+        }
+    }
+    private string[] names;
 
     private async Task Start()
     {
@@ -46,9 +87,14 @@
             var resp = await Http.GetStringAsync(host + "/start");
             if (resp != "Need more players.")
             {
+                string names_str = await Http.GetStringAsync(host + "/get_names");
+                names = names_str.Split(" ");
+                Console.WriteLine("Names: ");
+                int i = 0;
+                foreach (var name in names)
+                    Console.WriteLine(name + ": " + i++);
                 started = true;
                 e = "";
-                await Task.Delay(200);
             }
             else
                 e = "You cant start the game, because in game less than 5 players.";
@@ -71,10 +117,18 @@
                 string resp = await Http.GetStringAsync(host + "/is_started");
                 if (resp != "0")
                 {
+                    string names_str = await Http.GetStringAsync(host + "/get_names");
+                    names = names_str.Split(" ");
+                    Console.WriteLine("Names: ");
+                    int i = 0;
+                    foreach (var name in names)
+                        Console.WriteLine(name + ": " + i++);
+
                     this.started = true;
                     StateHasChanged();
                     break;
                 }
+
             }
         }
         catch (Exception e)
@@ -83,17 +137,10 @@
         }
     }
 
-    protected override async Task OnInitializedAsync()
+    private async Task get_num()
     {
-        try
-        {
-            num = await Http.GetStringAsync(host + "/entry");
-        }
-        catch (Exception e)
-        {
-            exp = e;
-        }
-        if (num != "0")
+        num = await Http.GetStringAsync(host + "/entry/" + name);
+        if (num != "0" && num != "")
         {
             Task k = waitAndBleed();
         }

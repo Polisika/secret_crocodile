@@ -70,12 +70,12 @@ namespace server
             }
         }
 
-        public void StartSession(int count)
+        public void StartSession(int count, string[] names)
         {
             if (count != 4)
                 throw new Exception("Для начала нужно ровно 5 игроков");
             var rand = new Random();
-            this._rand = rand;
+            _rand = rand;
             List<Player> players = new List<Player>();
             int crocodile = rand.Next(count);
             int helper_croco = rand.Next(count);
@@ -84,11 +84,11 @@ namespace server
             for (int i = 0; i <= count; i++)
             {
                 if (crocodile == i)
-                    players.Add(new Player(RoleType.Crokodile, Party.Fascist, i));
+                    players.Add(new Player(RoleType.Crokodile, Party.Fascist, i, names[i]));
                 else if (helper_croco == i)
-                    players.Add(new Player(RoleType.Fascist, Party.Fascist, i));
+                    players.Add(new Player(RoleType.Fascist, Party.Fascist, i, names[i]));
                 else
-                    players.Add(new Player(RoleType.Liberal, Party.Liberal, i));
+                    players.Add(new Player(RoleType.Liberal, Party.Liberal, i, names[i]));
             }
             this.players = players;
         }
